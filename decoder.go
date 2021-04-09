@@ -9,7 +9,7 @@ import (
 type Decoder interface {
 	GetOk(key string) (interface{}, bool)
 	Get(key string) interface{}
-	// Append(key string) Resource
+	GetChange(key string) (interface{}, interface{})
 }
 
 // NewDecoder has no documentation
@@ -37,8 +37,14 @@ func (d *decoder) GetOk(key string) (interface{}, bool) {
 	if d.address == "" {
 		return d.parent.GetOk(key)
 	}
-	log.Println("GetOk", d.address+"."+key)
 	return d.parent.GetOk(d.address + "." + key)
+}
+
+func (d *decoder) GetChange(key string) (interface{}, interface{}) {
+	if d.address == "" {
+		return d.parent.GetChange(key)
+	}
+	return d.parent.GetChange(d.address + "." + key)
 }
 
 // Get returns the data for the given key, or nil if the key doesn't exist
