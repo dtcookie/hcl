@@ -10,6 +10,7 @@ type Schema struct {
 	Elem        interface{}
 	Default     interface{}
 	Required    bool
+	Deprecated  string
 }
 
 type ValueType int
