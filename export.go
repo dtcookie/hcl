@@ -41,6 +41,12 @@ func (e *exportEntries) eval(key string, value interface{}) {
 		default:
 			panic(fmt.Sprintf("unsupported elem type %T", typedElem))
 		}
+	case []string:
+		if len(v) == 0 {
+			return
+		}
+		entry := &primitiveEntry{Key: key, Value: value}
+		*e = append(*e, entry)
 	default:
 		rv := reflect.ValueOf(v)
 		switch rv.Kind() {

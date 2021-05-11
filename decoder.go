@@ -2,14 +2,59 @@ package hcl
 
 import (
 	"fmt"
-	"log"
 )
+
+// Decoder has no documentation
+type MinDecoder interface {
+	GetOk(key string) (interface{}, bool)
+	Get(key string) interface{}
+	GetChange(key string) (interface{}, interface{})
+}
 
 // Decoder has no documentation
 type Decoder interface {
 	GetOk(key string) (interface{}, bool)
 	Get(key string) interface{}
 	GetChange(key string) (interface{}, interface{})
+	GetStringSet(key string) []string
+}
+
+type mindecoder struct {
+	parent MinDecoder
+}
+
+func DecoderFrom(m MinDecoder) Decoder {
+	return &mindecoder{parent: m}
+}
+
+func (d *mindecoder) GetStringSet(key string) []string {
+	result := []string{}
+	if value, ok := d.GetOk(key); ok {
+		if arr, ok := value.([]interface{}); ok {
+			for _, elem := range arr {
+				result = append(result, elem.(string))
+			}
+		} else if set, ok := value.(Set); ok {
+			if set.Len() > 0 {
+				for _, elem := range set.List() {
+					result = append(result, elem.(string))
+				}
+			}
+		}
+	}
+	return result
+}
+
+func (d *mindecoder) GetOk(key string) (interface{}, bool) {
+	return d.parent.GetOk(key)
+}
+
+func (d *mindecoder) GetChange(key string) (interface{}, interface{}) {
+	return d.parent.GetChange(key)
+}
+
+func (d *mindecoder) Get(key string) interface{} {
+	return d.parent.Get(key)
 }
 
 // NewDecoder has no documentation
@@ -26,6 +71,24 @@ func NewDecoder(parent Decoder, address ...interface{}) Decoder {
 type decoder struct {
 	parent  Decoder
 	address string
+}
+
+func (d *decoder) GetStringSet(key string) []string {
+	result := []string{}
+	if value, ok := d.GetOk(key); ok {
+		if arr, ok := value.([]interface{}); ok {
+			for _, elem := range arr {
+				result = append(result, elem.(string))
+			}
+		} else if set, ok := value.(Set); ok {
+			if set.Len() > 0 {
+				for _, elem := range set.List() {
+					result = append(result, elem.(string))
+				}
+			}
+		}
+	}
+	return result
 }
 
 // GetOk returns the data for the given key and whether or not the key
@@ -60,6 +123,5 @@ func (d *decoder) Get(key string) interface{} {
 	if d.address == "" {
 		return d.parent.Get(key)
 	}
-	log.Println("Get", d.address+"."+key)
 	return d.parent.Get(d.address + "." + key)
 }
