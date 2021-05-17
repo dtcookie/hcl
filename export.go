@@ -5,13 +5,36 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"sort"
+	"strings"
 )
+
+func sk(s string) string {
+	if s == "name" {
+		return "00" + s
+	}
+	if s == "description" {
+		return "10" + s
+	}
+	if s == "type" {
+		return "20" + s
+	}
+	if s == "enabled" {
+		return "30" + s
+	}
+	return "90" + s
+}
 
 type exportEntry interface {
 	Write(w io.Writer, indent string) error
+	IsLessThan(other exportEntry) bool
 }
 
 type exportEntries []exportEntry
+
+func (e exportEntries) Less(i, j int) bool {
+	return e[i].IsLessThan(e[j])
+}
 
 func (e *exportEntries) eval(key string, value interface{}) {
 	switch v := value.(type) {
@@ -71,8 +94,10 @@ func Export(marshaler Marshaler, w io.Writer) error {
 	if m, err = marshaler.MarshalHCL(); err != nil {
 		return err
 	}
+
 	ents := exportEntries{}
 	ents.handle(m)
+	sort.SliceStable(ents, ents.Less)
 	for _, entry := range ents {
 		if err := entry.Write(w, "  "); err != nil {
 			return err
@@ -100,17 +125,37 @@ func (pe *primitiveEntry) Write(w io.Writer, indent string) error {
 	return err
 }
 
+func (pe *primitiveEntry) IsLessThan(other exportEntry) bool {
+	switch ro := other.(type) {
+	case *primitiveEntry:
+		return strings.Compare(sk(pe.Key), sk(ro.Key)) < 0
+	case *resourceEntry:
+		return true
+	}
+	return false
+}
+
 type resourceEntry struct {
 	Indent  string
 	Key     string
 	Entries exportEntries
 }
 
+func (re *resourceEntry) IsLessThan(other exportEntry) bool {
+	switch ro := other.(type) {
+	case *primitiveEntry:
+		return false
+	case *resourceEntry:
+		return strings.Compare(re.Key, ro.Key) < 0
+	}
+	return false
+}
 func (re *resourceEntry) Write(w io.Writer, indent string) error {
 	s := fmt.Sprintf("%s%v {\n", indent, re.Key)
 	if _, err := w.Write([]byte(s)); err != nil {
 		return err
 	}
+	sort.SliceStable(re.Entries, re.Entries.Less)
 	for _, entry := range re.Entries {
 		if err := entry.Write(w, indent+"  "); err != nil {
 			return err

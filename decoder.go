@@ -9,6 +9,7 @@ type MinDecoder interface {
 	GetOk(key string) (interface{}, bool)
 	Get(key string) interface{}
 	GetChange(key string) (interface{}, interface{})
+	GetOkExists(key string) (interface{}, bool)
 }
 
 // Decoder has no documentation
@@ -17,6 +18,7 @@ type Decoder interface {
 	Get(key string) interface{}
 	GetChange(key string) (interface{}, interface{})
 	GetStringSet(key string) []string
+	GetOkExists(key string) (interface{}, bool)
 }
 
 type mindecoder struct {
@@ -47,6 +49,10 @@ func (d *mindecoder) GetStringSet(key string) []string {
 
 func (d *mindecoder) GetOk(key string) (interface{}, bool) {
 	return d.parent.GetOk(key)
+}
+
+func (d *mindecoder) GetOkExists(key string) (interface{}, bool) {
+	return d.parent.GetOkExists(key)
 }
 
 func (d *mindecoder) GetChange(key string) (interface{}, interface{}) {
@@ -101,6 +107,13 @@ func (d *decoder) GetOk(key string) (interface{}, bool) {
 		return d.parent.GetOk(key)
 	}
 	return d.parent.GetOk(d.address + "." + key)
+}
+
+func (d *decoder) GetOkExists(key string) (interface{}, bool) {
+	if d.address == "" {
+		return d.parent.GetOkExists(key)
+	}
+	return d.parent.GetOkExists(d.address + "." + key)
 }
 
 func (d *decoder) GetChange(key string) (interface{}, interface{}) {

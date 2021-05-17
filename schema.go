@@ -11,6 +11,7 @@ type Schema struct {
 	Default     interface{}
 	Required    bool
 	Deprecated  string
+	Computed    bool
 }
 
 type ValueType int
