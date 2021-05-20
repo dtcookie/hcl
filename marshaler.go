@@ -4,3 +4,7 @@ package hcl
 type Marshaler interface {
 	MarshalHCL() (map[string]interface{}, error)
 }
+
+type ExtMarshaler interface {
+	MarshalHCL(Decoder) (map[string]interface{}, error)
+}

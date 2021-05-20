@@ -1,6 +1,7 @@
 package hcl
 
 import (
+	"encoding/json"
 	"fmt"
 )
 
@@ -10,6 +11,7 @@ type MinDecoder interface {
 	Get(key string) interface{}
 	GetChange(key string) (interface{}, interface{})
 	GetOkExists(key string) (interface{}, bool)
+	HasChange(key string) bool
 }
 
 // Decoder has no documentation
@@ -19,6 +21,8 @@ type Decoder interface {
 	GetChange(key string) (interface{}, interface{})
 	GetStringSet(key string) []string
 	GetOkExists(key string) (interface{}, bool)
+	Reader(unkowns ...map[string]json.RawMessage) Reader
+	HasChange(key string) bool
 }
 
 type mindecoder struct {
@@ -47,8 +51,19 @@ func (d *mindecoder) GetStringSet(key string) []string {
 	return result
 }
 
+func (d *mindecoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
+	if len(unkowns) > 0 {
+		return NewReader(d, unkowns[0])
+	}
+	return NewReader(d, nil)
+}
+
 func (d *mindecoder) GetOk(key string) (interface{}, bool) {
 	return d.parent.GetOk(key)
+}
+
+func (d *mindecoder) HasChange(key string) bool {
+	return d.parent.HasChange(key)
 }
 
 func (d *mindecoder) GetOkExists(key string) (interface{}, bool) {
@@ -77,6 +92,20 @@ func NewDecoder(parent Decoder, address ...interface{}) Decoder {
 type decoder struct {
 	parent  Decoder
 	address string
+}
+
+func (d *decoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
+	if len(unkowns) > 0 {
+		return NewReader(d, unkowns[0])
+	}
+	return NewReader(d, nil)
+}
+
+func (d *decoder) HasChange(key string) bool {
+	if d.address == "" {
+		return d.parent.HasChange(key)
+	}
+	return d.parent.HasChange(d.address + "." + key)
 }
 
 func (d *decoder) GetStringSet(key string) []string {
@@ -137,4 +166,37 @@ func (d *decoder) Get(key string) interface{} {
 		return d.parent.Get(key)
 	}
 	return d.parent.Get(d.address + "." + key)
+}
+
+type voidDecoder struct{}
+
+func (vd *voidDecoder) GetOk(key string) (interface{}, bool) {
+	return nil, false
+}
+
+func (vd *voidDecoder) Get(key string) interface{} {
+	return nil
+}
+
+func (vd *voidDecoder) GetChange(key string) (interface{}, interface{}) {
+	return nil, false
+}
+
+func (vd *voidDecoder) GetStringSet(key string) []string {
+	return nil
+}
+
+func (vd *voidDecoder) GetOkExists(key string) (interface{}, bool) {
+	return nil, false
+}
+
+func (vd *voidDecoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
+	if len(unkowns) > 0 {
+		return NewReader(vd, unkowns[0])
+	}
+	return NewReader(vd, nil)
+}
+
+func (vd *voidDecoder) HasChange(key string) bool {
+	return false
 }

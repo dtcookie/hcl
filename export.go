@@ -94,7 +94,20 @@ func Export(marshaler Marshaler, w io.Writer) error {
 	if m, err = marshaler.MarshalHCL(); err != nil {
 		return err
 	}
+	return export(m, w)
+}
 
+func ExtExport(marshaler ExtMarshaler, w io.Writer) error {
+	var m map[string]interface{}
+	var err error
+	if m, err = marshaler.MarshalHCL(&voidDecoder{}); err != nil {
+		return err
+	}
+	return export(m, w)
+}
+
+func export(m map[string]interface{}, w io.Writer) error {
+	var err error
 	ents := exportEntries{}
 	ents.handle(m)
 	sort.SliceStable(ents, ents.Less)
