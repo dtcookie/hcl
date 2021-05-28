@@ -23,6 +23,7 @@ type Decoder interface {
 	GetOkExists(key string) (interface{}, bool)
 	Reader(unkowns ...map[string]json.RawMessage) Reader
 	HasChange(key string) bool
+	MarshalAll(items map[string]interface{}) (Properties, error)
 }
 
 type mindecoder struct {
@@ -56,6 +57,14 @@ func (d *mindecoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
 		return NewReader(d, unkowns[0])
 	}
 	return NewReader(d, nil)
+}
+
+func (d *mindecoder) MarshalAll(items map[string]interface{}) (Properties, error) {
+	properties := Properties{}
+	if err := properties.MarshalAll(d, items); err != nil {
+		return nil, err
+	}
+	return properties, nil
 }
 
 func (d *mindecoder) GetOk(key string) (interface{}, bool) {
@@ -99,6 +108,14 @@ func (d *decoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
 		return NewReader(d, unkowns[0])
 	}
 	return NewReader(d, nil)
+}
+
+func (d *decoder) MarshalAll(items map[string]interface{}) (Properties, error) {
+	properties := Properties{}
+	if err := properties.MarshalAll(d, items); err != nil {
+		return nil, err
+	}
+	return properties, nil
 }
 
 func (d *decoder) HasChange(key string) bool {
@@ -199,4 +216,12 @@ func (vd *voidDecoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
 
 func (vd *voidDecoder) HasChange(key string) bool {
 	return false
+}
+
+func (vd *voidDecoder) MarshalAll(items map[string]interface{}) (Properties, error) {
+	properties := Properties{}
+	if err := properties.MarshalAll(vd, items); err != nil {
+		return nil, err
+	}
+	return properties, nil
 }

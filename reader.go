@@ -8,6 +8,8 @@ import (
 
 type Reader interface {
 	String(string) *string
+	Float64(string) *float64
+	Int32(string) *int32
 	Bool(string) *bool
 	Count(string) int
 	Decode(v interface{}) error
@@ -32,6 +34,22 @@ func (r *reader) String(key string) *string {
 	r.rmk(key)
 	if value, _ := r.decoder.GetOk(key); value != nil {
 		return opt.NewString(value.(string))
+	}
+	return nil
+}
+
+func (r *reader) Int32(key string) *int32 {
+	r.rmk(key)
+	if value, _ := r.decoder.GetOk(key); value != nil {
+		return opt.NewInt32(int32(value.(int)))
+	}
+	return nil
+}
+
+func (r *reader) Float64(key string) *float64 {
+	r.rmk(key)
+	if value, _ := r.decoder.GetOk(key); value != nil {
+		return opt.NewFloat64(value.(float64))
 	}
 	return nil
 }
