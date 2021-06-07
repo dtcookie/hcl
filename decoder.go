@@ -2,7 +2,10 @@ package hcl
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
+	"log"
+	"reflect"
 )
 
 // Decoder has no documentation
@@ -24,6 +27,12 @@ type Decoder interface {
 	Reader(unkowns ...map[string]json.RawMessage) Reader
 	HasChange(key string) bool
 	MarshalAll(items map[string]interface{}) (Properties, error)
+
+	Decode(key string, v interface{}) error
+	DecodeAll(map[string]interface{}) error
+	DecodeAny(map[string]interface{}) (interface{}, error)
+
+	DecodeSlice(key string, v interface{}) error
 }
 
 type mindecoder struct {
@@ -32,6 +41,131 @@ type mindecoder struct {
 
 func DecoderFrom(m MinDecoder) Decoder {
 	return &mindecoder{parent: m}
+}
+
+func (d *mindecoder) Decode(key string, v interface{}) error {
+	return DecoderFrom(d).Decode(key, v)
+}
+
+func (d *mindecoder) DecodeAll(m map[string]interface{}) error {
+	return DecoderFrom(d).DecodeAll(m)
+}
+
+func (d *mindecoder) DecodeSlice(key string, v interface{}) error {
+	return DecoderFrom(d).DecodeSlice(key, v)
+}
+
+func (d *mindecoder) DecodeAny(m map[string]interface{}) (interface{}, error) {
+	return DecoderFrom(d).DecodeAny(m)
+}
+
+func (d *decoder) DecodeAny(m map[string]interface{}) (interface{}, error) {
+	if len(m) == 0 {
+		return nil, nil
+	}
+	for k, v := range m {
+		found, err := d.decode(k, v)
+		if err != nil {
+			return nil, err
+		}
+		if found {
+			return v, nil
+		}
+	}
+	return nil, nil
+}
+
+func (d *decoder) DecodeAll(m map[string]interface{}) error {
+	if len(m) == 0 {
+		return nil
+	}
+	for k, v := range m {
+		if err := d.Decode(k, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (d *decoder) DecodeSlice(key string, v interface{}) error {
+	rv := reflect.ValueOf(v)
+	if rv.Type().Kind() != reflect.Ptr || rv.Type().Elem().Kind() != reflect.Slice {
+		return fmt.Errorf("decoding slices requires a pointer to a slice to be specified. %T doesn't qualify", v)
+	}
+	elemType := rv.Type().Elem().Elem()
+	if !elemType.Implements(reflect.TypeOf((*Unmarshaler)(nil)).Elem()) {
+		return fmt.Errorf("decoding slices requires a pointer to a slice of elements that implement hcl.Unmarshaler to be specified. %T doesn't qualify (%v is not implementing %v)", v, elemType, reflect.TypeOf((*Unmarshaler)(nil)).Elem())
+	}
+	vSlice := rv.Elem()
+	if result, ok := d.GetOk(fmt.Sprintf("%v.#", key)); ok {
+		for idx := 0; idx < result.(int); idx++ {
+			entry := reflect.New(elemType.Elem()).Interface()
+			if err := entry.(Unmarshaler).UnmarshalHCL(NewDecoder(d, key, idx)); err != nil {
+				return err
+			}
+			vSlice.Set(reflect.Append(vSlice, reflect.ValueOf(entry)))
+		}
+	}
+
+	return nil
+}
+
+func (d *decoder) Decode(key string, v interface{}) error {
+	_, err := d.decode(key, v)
+	return err
+}
+
+var stringType = reflect.TypeOf("")
+
+func (d *decoder) decode(key string, v interface{}) (bool, error) {
+	vTarget := reflect.ValueOf(v)
+	if !vTarget.IsValid() || vTarget.IsNil() {
+		return false, errors.New("passed an invalid target value to Decode()")
+	}
+	if unmarshaler, ok := v.(Unmarshaler); ok {
+		if _, ok := d.GetOk(fmt.Sprintf("%v.#", key)); ok {
+			if err := unmarshaler.UnmarshalHCL(NewDecoder(d, key, 0)); err != nil {
+				return true, err
+			}
+			return true, nil
+		}
+	}
+	if vTarget.Type().Kind() != reflect.Ptr {
+		return false, fmt.Errorf("Decode (%v) requires a pointer to store results into", key)
+	}
+	if result, ok := d.GetOk(key); ok {
+		vTarget := vTarget.Elem()
+		vResult := reflect.ValueOf(result)
+		tResult := vResult.Type()
+		tTarget := vTarget.Type()
+		if tResult == stringType {
+			if tTarget.Kind() == reflect.String {
+				if tTarget != stringType {
+					vTarget.Set(vResult.Convert(tTarget))
+					return true, nil
+				}
+			}
+			if tTarget.Kind() == reflect.Ptr {
+				tTarget = tTarget.Elem()
+				if tTarget.Kind() == reflect.String {
+					if tTarget != stringType {
+						tEnum := reflect.ValueOf(v).Type().Elem().Elem()
+						vEnumPtr := reflect.New(tEnum)
+						vEnum := vEnumPtr.Elem()
+						vEnum.Set(vResult.Convert(tEnum))
+						vTarget.Set(vEnumPtr)
+						return true, nil
+					}
+				}
+			}
+		}
+		if vResult.Type().AssignableTo(vTarget.Type()) {
+			vTarget.Set(vResult)
+		}
+		log.Printf("cannot assign type %v to values of type %v", vResult.Type(), vTarget.Type())
+		return true, nil
+	}
+	return false, nil
 }
 
 func (d *mindecoder) GetStringSet(key string) []string {
@@ -185,7 +319,15 @@ func (d *decoder) Get(key string) interface{} {
 	return d.parent.Get(d.address + "." + key)
 }
 
+func VoidDecoder() Decoder {
+	return &voidDecoder{}
+}
+
 type voidDecoder struct{}
+
+func (d *voidDecoder) DecodeAny(m map[string]interface{}) (interface{}, error) {
+	return nil, nil
+}
 
 func (vd *voidDecoder) GetOk(key string) (interface{}, bool) {
 	return nil, false
@@ -207,6 +349,14 @@ func (vd *voidDecoder) GetOkExists(key string) (interface{}, bool) {
 	return nil, false
 }
 
+func (vd *voidDecoder) Decode(key string, v interface{}) error {
+	return nil
+}
+
+func (d *voidDecoder) DecodeAll(m map[string]interface{}) error {
+	return nil
+}
+
 func (vd *voidDecoder) Reader(unkowns ...map[string]json.RawMessage) Reader {
 	if len(unkowns) > 0 {
 		return NewReader(vd, unkowns[0])
@@ -224,4 +374,8 @@ func (vd *voidDecoder) MarshalAll(items map[string]interface{}) (Properties, err
 		return nil, err
 	}
 	return properties, nil
+}
+
+func (vd *voidDecoder) DecodeSlice(key string, v interface{}) error {
+	return nil
 }

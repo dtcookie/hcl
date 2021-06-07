@@ -8,3 +8,7 @@ type Marshaler interface {
 type ExtMarshaler interface {
 	MarshalHCL(Decoder) (map[string]interface{}, error)
 }
+
+type Unmarshaler interface {
+	UnmarshalHCL(decoder Decoder) error
+}
