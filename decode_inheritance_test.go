@@ -61,7 +61,7 @@ func (me *ShapeWrapper) MarshalHCL() (map[string]interface{}, error) {
 		}
 		return properties, nil
 	default:
-		return nil, fmt.Errorf("cannot HCL marshal objects of type %T", cmp)
+		return nil, fmt.Errorf("cannot HCL marshal (x) objects of type %T", cmp)
 	}
 }
 

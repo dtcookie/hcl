@@ -3,9 +3,8 @@ package hcl
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"reflect"
-
-	"github.com/dtcookie/xjson"
 )
 
 type Properties map[string]interface{}
@@ -16,15 +15,15 @@ func NewProperties(v interface{}, unknowns ...map[string]json.RawMessage) (Prope
 		return properties, nil
 	}
 
-	if data, err := json.Marshal(v); err == nil {
-		p := xjson.Properties{}
-		if err = json.Unmarshal(data, &p); err != nil {
-			return nil, err
-		}
-		for k := range p {
-			delete(unknowns[0], k)
-		}
-	}
+	// if data, err := json.Marshal(unknowns[0]); err == nil {
+	// 	p := xjson.Properties{}
+	// 	if err = json.Unmarshal(data, &p); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	for k := range p {
+	// 		delete(unknowns[0], k)
+	// 	}
+	// }
 	data, err := json.Marshal(unknowns[0])
 	if err != nil {
 		return nil, err
@@ -174,7 +173,7 @@ func (me Properties) Marshal(decoder Decoder, key string, v interface{}) error {
 			}
 
 		default:
-			panic(fmt.Sprintf("unsupported type %T", v))
+			log.Printf("unsupported type %T", v)
 		}
 	}
 	return nil
@@ -219,6 +218,9 @@ func (me Properties) EncodeAll(items map[string]interface{}) (Properties, error)
 }
 
 func (me Properties) Encode(key string, v interface{}) error {
+	if v == nil {
+		return nil
+	}
 	switch t := v.(type) {
 	case *string:
 		if t == nil {
@@ -322,16 +324,38 @@ func (me Properties) Encode(key string, v interface{}) error {
 		me[key] = float64(t)
 	case float64:
 		me[key] = float64(t)
+	case map[string]json.RawMessage:
+		if len(t) == 0 {
+			return nil
+		}
+		data, err := json.Marshal(t)
+		if err != nil {
+			return err
+		}
+		me["unknowns"] = string(data)
 	default:
 		if reflect.TypeOf(v).Kind() == reflect.Slice {
 			if reflect.ValueOf(v).Len() == 0 {
 				return nil
 			}
+			if reflect.TypeOf(v).Elem().Kind() == reflect.String {
+				entries := []string{}
+				vValue := reflect.ValueOf(v)
+				for i := 0; i < vValue.Len(); i++ {
+					entries = append(entries, fmt.Sprintf("%v", vValue.Index(i).Interface()))
+				}
+				me[key] = entries
+				return nil
+			}
+
 		}
 		if reflect.TypeOf(v).Kind() == reflect.String {
 			me[key] = fmt.Sprintf("%v", v)
 			return nil
 		} else if marshaller, ok := v.(ExtMarshaler); ok {
+			if reflect.ValueOf(v).IsNil() {
+				return nil
+			}
 			if marshalled, err := marshaller.MarshalHCL(VoidDecoder()); err == nil {
 				me[key] = []interface{}{marshalled}
 				return nil
@@ -339,6 +363,9 @@ func (me Properties) Encode(key string, v interface{}) error {
 				return err
 			}
 		} else if marshaller, ok := v.(Marshaler); ok {
+			if reflect.ValueOf(v).IsNil() {
+				return nil
+			}
 			if marshalled, err := marshaller.MarshalHCL(); err == nil {
 				me[key] = []interface{}{marshalled}
 				return nil

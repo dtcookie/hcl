@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+
+	"github.com/dtcookie/opt"
 )
 
 // Decoder has no documentation
@@ -44,19 +46,19 @@ func DecoderFrom(m MinDecoder) Decoder {
 }
 
 func (d *mindecoder) Decode(key string, v interface{}) error {
-	return DecoderFrom(d).Decode(key, v)
+	return NewDecoder(d).Decode(key, v)
 }
 
 func (d *mindecoder) DecodeAll(m map[string]interface{}) error {
-	return DecoderFrom(d).DecodeAll(m)
+	return NewDecoder(d).DecodeAll(m)
 }
 
 func (d *mindecoder) DecodeSlice(key string, v interface{}) error {
-	return DecoderFrom(d).DecodeSlice(key, v)
+	return NewDecoder(d).DecodeSlice(key, v)
 }
 
 func (d *mindecoder) DecodeAny(m map[string]interface{}) (interface{}, error) {
-	return DecoderFrom(d).DecodeAny(m)
+	return NewDecoder(d).DecodeAny(m)
 }
 
 func (d *decoder) DecodeAny(m map[string]interface{}) (interface{}, error) {
@@ -116,11 +118,38 @@ func (d *decoder) Decode(key string, v interface{}) error {
 }
 
 var stringType = reflect.TypeOf("")
+var stringSliceType = reflect.TypeOf([]string{})
+var marshalerType = reflect.TypeOf((*Marshaler)(nil)).Elem()
 
 func (d *decoder) decode(key string, v interface{}) (bool, error) {
 	vTarget := reflect.ValueOf(v)
 	if !vTarget.IsValid() || vTarget.IsNil() {
 		return false, errors.New("passed an invalid target value to Decode()")
+	}
+	if vTarget.Type().Kind() == reflect.Ptr {
+		valueType := vTarget.Type()
+		valueType = valueType.Elem()
+		if valueType.Kind() == reflect.Ptr {
+			structValueType := valueType.Elem()
+			if structValueType.Kind() == reflect.Struct {
+				if valueType.Implements(marshalerType) {
+					// log.Printf("%v implements %v ==> %v", valueType, marshalerType, true)
+					newValue := reflect.New(structValueType)
+					// log.Printf("new value has type %v (valueType: %v)", newValue.Type(), valueType)
+					newValueIface := newValue.Interface()
+					if unmarshaler, ok := newValueIface.(Unmarshaler); ok {
+						if _, ok := d.GetOk(fmt.Sprintf("%v.#", key)); ok {
+							vTarget = vTarget.Elem()
+							vTarget.Set(newValue)
+							if err := unmarshaler.UnmarshalHCL(NewDecoder(d, key, 0)); err != nil {
+								return true, err
+							}
+							return true, nil
+						}
+					}
+				}
+			}
+		}
 	}
 	if unmarshaler, ok := v.(Unmarshaler); ok {
 		if _, ok := d.GetOk(fmt.Sprintf("%v.#", key)); ok {
@@ -134,14 +163,141 @@ func (d *decoder) decode(key string, v interface{}) (bool, error) {
 		return false, fmt.Errorf("Decode (%v) requires a pointer to store results into", key)
 	}
 	if result, ok := d.GetOk(key); ok {
+		switch vActual := v.(type) {
+		case *[]string:
+			set := result.(Set)
+			strs := []string{}
+			for _, elem := range set.List() {
+				strs = append(strs, elem.(string))
+			}
+			*vActual = strs
+			return true, nil
+		case *string:
+			*vActual = result.(string)
+			return true, nil
+		case **string:
+			*vActual = opt.NewString(result.(string))
+			return true, nil
+		case *bool:
+			*vActual = result.(bool)
+			return true, nil
+		case **bool:
+			*vActual = opt.NewBool(result.(bool))
+			return true, nil
+		case *int32:
+			*vActual = int32(result.(int))
+			return true, nil
+		case **int32:
+			*vActual = opt.NewInt32(int32(result.(int)))
+			return true, nil
+		case *int64:
+			*vActual = int64(result.(int))
+			return true, nil
+		case **int64:
+			*vActual = opt.NewInt64(int64(result.(int)))
+			return true, nil
+		case *int8:
+			*vActual = int8(result.(int))
+			return true, nil
+		case **int8:
+			*vActual = opt.NewInt8(int8(result.(int)))
+			return true, nil
+		case *int16:
+			*vActual = int16(result.(int))
+			return true, nil
+		case **int16:
+			*vActual = opt.NewInt16(int16(result.(int)))
+			return true, nil
+		case *int:
+			*vActual = int(result.(int))
+			return true, nil
+		case **int:
+			*vActual = opt.NewInt(int(result.(int)))
+			return true, nil
+		case *uint32:
+			*vActual = uint32(result.(int))
+			return true, nil
+		case **uint32:
+			*vActual = opt.NewUInt32(uint32(result.(int)))
+			return true, nil
+		case *uint64:
+			*vActual = uint64(result.(int))
+			return true, nil
+		case **uint64:
+			*vActual = opt.NewUInt64(uint64(result.(int)))
+			return true, nil
+		case *uint8:
+			*vActual = uint8(result.(int))
+			return true, nil
+		case **uint8:
+			*vActual = opt.NewUInt8(uint8(result.(int)))
+			return true, nil
+		case *uint16:
+			*vActual = uint16(result.(int))
+			return true, nil
+		case **uint16:
+			*vActual = opt.NewUInt16(uint16(result.(int)))
+			return true, nil
+		case *uint:
+			*vActual = uint(result.(int))
+			return true, nil
+		case **uint:
+			*vActual = opt.NewUint(uint(result.(int)))
+			return true, nil
+		case *float64:
+			*vActual = float64(result.(float64))
+			return true, nil
+		case **float64:
+			*vActual = opt.NewFloat64(float64(result.(float64)))
+			return true, nil
+		default:
+			vTarget := reflect.ValueOf(v)
+			tTarget := vTarget.Type()
+			if tTarget.Kind() == reflect.Ptr {
+				tElem := tTarget.Elem()
+				if tElem.Kind() == reflect.String {
+					vTarget := vTarget.Elem()
+					vResult := reflect.ValueOf(result)
+					tTarget := vTarget.Type()
+					vTarget.Set(vResult.Convert(tTarget))
+					return true, nil
+				} else if tElem.Kind() == reflect.Ptr {
+					tElem := tElem.Elem()
+					if tElem.Kind() == reflect.String {
+						vTarget := vTarget.Elem()
+						vNewEnumPtr := reflect.New(vTarget.Type().Elem())
+						vNewEnum := vNewEnumPtr.Elem()
+						valueToSet := reflect.ValueOf(result).Convert(vTarget.Type().Elem())
+						vNewEnum.Set(valueToSet)
+						vTarget.Set(vNewEnumPtr)
+						return true, nil
+					}
+				} else if tElem.Kind() == reflect.Slice {
+					tSliceElem := tElem.Elem()
+					if tSliceElem.Kind() == reflect.String {
+						enumType := tElem.Elem()
+						enumSliceType := reflect.SliceOf(enumType)
+						vEnumSlicePtr := reflect.New(enumSliceType)
+						vEnumSlice := vEnumSlicePtr.Elem()
+						for _, iString := range result.(Set).List() {
+							vEnumSlice = reflect.Append(vEnumSlice, reflect.ValueOf(iString).Convert(enumType))
+						}
+						vTarget.Elem().Set(reflect.ValueOf(vEnumSlice.Interface()))
+						return true, nil
+					}
+				}
+			}
+		}
 		vTarget := vTarget.Elem()
 		vResult := reflect.ValueOf(result)
 		tResult := vResult.Type()
 		tTarget := vTarget.Type()
+		// tOrigTarget := reflect.ValueOf(v).Type()
 		if tResult == stringType {
 			if tTarget.Kind() == reflect.String {
 				if tTarget != stringType {
 					vTarget.Set(vResult.Convert(tTarget))
+					// log.Printf("%v %v covered", tOrigTarget, key)
 					return true, nil
 				}
 			}
@@ -154,16 +310,33 @@ func (d *decoder) decode(key string, v interface{}) (bool, error) {
 						vEnum := vEnumPtr.Elem()
 						vEnum.Set(vResult.Convert(tEnum))
 						vTarget.Set(vEnumPtr)
+						// log.Printf("%v %v covered", tOrigTarget, key)
+						return true, nil
+					} else {
+						vTarget.Set(reflect.ValueOf(opt.NewString(result.(string))))
+						// log.Printf("%v %v covered", tOrigTarget, key)
 						return true, nil
 					}
 				}
 			}
 		}
+		setResult, ok := result.(Set)
+		if ok && vTarget.Type() == stringSliceType {
+			entries := []string{}
+			for _, entry := range setResult.List() {
+				entries = append(entries, entry.(string))
+			}
+			vTarget.Set(reflect.ValueOf(entries))
+			// log.Printf("%v %v covered", tOrigTarget, key)
+			return true, nil
+		}
 		if vResult.Type().AssignableTo(vTarget.Type()) {
 			vTarget.Set(vResult)
+			// log.Printf("%v %v covered", tOrigTarget, key)
+			return true, nil
+		} else {
+			log.Printf("[WARN] %v %v NOT covered", reflect.ValueOf(v).Type(), key)
 		}
-		log.Printf("cannot assign type %v to values of type %v", vResult.Type(), vTarget.Type())
-		return true, nil
 	}
 	return false, nil
 }
@@ -222,7 +395,7 @@ func (d *mindecoder) Get(key string) interface{} {
 }
 
 // NewDecoder has no documentation
-func NewDecoder(parent Decoder, address ...interface{}) Decoder {
+func NewDecoder(parent MinDecoder, address ...interface{}) Decoder {
 	joined := ""
 	sep := ""
 	for _, part := range address {
@@ -233,7 +406,7 @@ func NewDecoder(parent Decoder, address ...interface{}) Decoder {
 }
 
 type decoder struct {
-	parent  Decoder
+	parent  MinDecoder
 	address string
 }
 
