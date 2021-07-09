@@ -172,6 +172,14 @@ func (d *decoder) decode(key string, v interface{}) (bool, error) {
 			}
 			*vActual = strs
 			return true, nil
+		case *[]float64:
+			set := result.(Set)
+			strs := []float64{}
+			for _, elem := range set.List() {
+				strs = append(strs, elem.(float64))
+			}
+			*vActual = strs
+			return true, nil
 		case *string:
 			*vActual = result.(string)
 			return true, nil
@@ -327,12 +335,10 @@ func (d *decoder) decode(key string, v interface{}) (bool, error) {
 				entries = append(entries, entry.(string))
 			}
 			vTarget.Set(reflect.ValueOf(entries))
-			// log.Printf("%v %v covered", tOrigTarget, key)
 			return true, nil
 		}
 		if vResult.Type().AssignableTo(vTarget.Type()) {
 			vTarget.Set(vResult)
-			// log.Printf("%v %v covered", tOrigTarget, key)
 			return true, nil
 		} else {
 			log.Printf("[WARN] %v %v NOT covered", reflect.ValueOf(v).Type(), key)

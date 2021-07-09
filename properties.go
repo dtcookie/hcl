@@ -346,6 +346,14 @@ func (me Properties) Encode(key string, v interface{}) error {
 				}
 				me[key] = entries
 				return nil
+			} else if reflect.TypeOf(v).Elem().Kind() == reflect.Float64 {
+				entries := []float64{}
+				vValue := reflect.ValueOf(v)
+				for i := 0; i < vValue.Len(); i++ {
+					entries = append(entries, vValue.Index(i).Interface().(float64))
+				}
+				me[key] = entries
+				return nil
 			}
 
 		}

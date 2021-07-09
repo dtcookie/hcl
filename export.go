@@ -70,6 +70,12 @@ func (e *exportEntries) eval(key string, value interface{}) {
 		}
 		entry := &primitiveEntry{Key: key, Value: value}
 		*e = append(*e, entry)
+	case []float64:
+		if len(v) == 0 {
+			return
+		}
+		entry := &primitiveEntry{Key: key, Value: value}
+		*e = append(*e, entry)
 	default:
 		rv := reflect.ValueOf(v)
 		switch rv.Kind() {
