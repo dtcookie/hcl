@@ -52,7 +52,15 @@ func resOpt0(key string, bc string, sch *Schema) bool {
 	case TypeString:
 		return sch.Optional
 	case TypeList:
-		return resOpt(bc, sch.Elem.(*Resource).Schema)
+		switch v := sch.Elem.(type) {
+		case *Resource:
+			return resOpt(bc, v.Schema)
+		// case *Schema:
+		// 	return resOpt(bc, v)
+		default:
+			return sch.Optional
+		}
+
 	case TypeMap:
 		return false
 	case TypeSet:
