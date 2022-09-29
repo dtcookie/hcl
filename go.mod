@@ -1,4 +1,4 @@
-module github.com/dtcookie/hcl
+module github.com/dtcookie/hcl/v2
 
 go 1.19
 

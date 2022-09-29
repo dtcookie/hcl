@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/dtcookie/assert"
-	"github.com/dtcookie/hcl"
+	"github.com/dtcookie/hcl/v2"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
