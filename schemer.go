@@ -19,19 +19,16 @@ func unref(t reflect.Type) reflect.Type {
 	return t
 }
 
-func (me schemer) Schema() (*schema.Schema, error) {
+func (me schemer) Schema() *schema.Schema {
 	return me.schema(me.Field.Type)
 }
 
-func (me schemer) schema(t reflect.Type) (*schema.Schema, error) {
+func (me schemer) schema(t reflect.Type) *schema.Schema {
 	switch kind := t.Kind(); kind {
 	case reflect.Map, reflect.Interface, reflect.Array, reflect.Uintptr, reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func, reflect.UnsafePointer:
-		return nil, UnsupportedTypeError{me.Field.Name, t}
+		return nil
 	case reflect.Struct:
-		structSchema, err := Schema(reflect.New(t).Elem().Interface())
-		if err != nil {
-			return nil, err
-		}
+		structSchema := Schema(reflect.New(t).Elem().Interface())
 		return &schema.Schema{
 			Type:        schema.TypeList,
 			Description: me.Documentation,
@@ -40,16 +37,9 @@ func (me schemer) schema(t reflect.Type) (*schema.Schema, error) {
 			Required:    !me.OmitEmpty,
 			Optional:    me.OmitEmpty,
 			Elem:        &schema.Resource{Schema: structSchema},
-		}, nil
+		}
 	case reflect.Pointer:
-		sch, err := me.schema(unref(t))
-		if err == nil {
-			return sch, nil
-		}
-		if _, ok := err.(UnsupportedTypeError); ok {
-			return nil, UnsupportedTypeError{me.Field.Name, t}
-		}
-		return nil, err
+		return me.schema(unref(t))
 	case reflect.Slice:
 		schemaType := schema.TypeList
 		if me.Unordered {
@@ -64,7 +54,7 @@ func (me schemer) schema(t reflect.Type) (*schema.Schema, error) {
 				Required:    !me.OmitEmpty,
 				Optional:    me.OmitEmpty,
 				Elem:        &schema.Schema{Type: schema.TypeString},
-			}, nil
+			}
 		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 			return &schema.Schema{
 				Type:        schemaType,
@@ -73,7 +63,7 @@ func (me schemer) schema(t reflect.Type) (*schema.Schema, error) {
 				Required:    !me.OmitEmpty,
 				Optional:    me.OmitEmpty,
 				Elem:        &schema.Schema{Type: schema.TypeInt},
-			}, nil
+			}
 		case reflect.Float32, reflect.Float64:
 			return &schema.Schema{
 				Type:        schemaType,
@@ -82,12 +72,9 @@ func (me schemer) schema(t reflect.Type) (*schema.Schema, error) {
 				Required:    !me.OmitEmpty,
 				Optional:    me.OmitEmpty,
 				Elem:        &schema.Schema{Type: schema.TypeFloat},
-			}, nil
-		case reflect.Struct:
-			structSchema, err := Schema(reflect.New(unref(t.Elem())).Elem().Interface())
-			if err != nil {
-				return nil, err
 			}
+		case reflect.Struct:
+			structSchema := Schema(reflect.New(unref(t.Elem())).Elem().Interface())
 			res := &schema.Schema{
 				Type:        schemaType,
 				Description: me.Documentation,
@@ -117,98 +104,38 @@ func (me schemer) schema(t reflect.Type) (*schema.Schema, error) {
 					},
 				}
 			}
-			return res, nil
+			return res
 		}
-		return nil, UnsupportedTypeError{me.Field.Name, t}
+		return nil
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		return &schema.Schema{
 			Type:        schema.TypeInt,
 			Description: me.Documentation,
 			Required:    !me.OmitEmpty,
 			Optional:    me.OmitEmpty,
-		}, nil
+		}
 	case reflect.Bool:
 		return &schema.Schema{
 			Type:        schema.TypeBool,
 			Description: me.Documentation,
 			Required:    !me.OmitEmpty,
 			Optional:    me.OmitEmpty,
-		}, nil
+		}
 	case reflect.String:
 		return &schema.Schema{
 			Type:        schema.TypeString,
 			Description: me.Documentation,
 			Required:    !me.OmitEmpty,
 			Optional:    me.OmitEmpty,
-		}, nil
+		}
 	case reflect.Float32, reflect.Float64:
 		return &schema.Schema{
 			Type:        schema.TypeFloat,
 			Description: me.Documentation,
 			Required:    !me.OmitEmpty,
 			Optional:    me.OmitEmpty,
-		}, nil
+		}
 	default:
-		return nil, UnsupportedTypeError{me.Field.Name, t}
+		return nil
 	}
 }
-
-// func schemaFieldHandlersFor(refType reflect.Type) []*schemaFieldHandler {
-// 	handlers := []*schemaFieldHandler{}
-// 	for idx := 0; idx < refType.NumField(); idx++ {
-// 		field := refType.Field(idx)
-// 		if field.Anonymous {
-// 			handlers = append(handlers, schemaFieldHandlersFor(field.Type)...)
-// 			continue
-// 		}
-// 		if !field.IsExported() {
-// 			continue
-// 		}
-// 		documentation := NoDocumentationAvailable
-// 		tag := field.Tag
-// 		if tagValue := tag.Get("doc"); len(tagValue) > 0 {
-// 			documentation = tagValue
-// 		}
-// 		if tagValue := tag.Get("hcl"); len(tagValue) > 0 {
-// 			tagValues := strings.Split(tagValue, ",")
-// 			tv := tagValues[0]
-// 			if tv == "-" {
-// 				continue
-// 			} else if tv == "" || strings.Contains(tv, "=") {
-// 				tv = camel.Strip(field.Name)
-// 			}
-// 			handler := &schemaFieldHandler{Field: field, OmitEmpty: false, Property: tv, Documentation: documentation}
-// 			for _, tagValue := range tagValues {
-// 				if tagValue == "omitempty" {
-// 					handler.OmitEmpty = true
-// 				}
-// 				if tagValue == "unordered" {
-// 					handler.Unordered = true
-// 				}
-// 				if strings.HasPrefix(tagValue, "elem=") {
-// 					handler.Elem = strings.TrimSpace(strings.TrimPrefix(tagValue, "elem="))
-// 				}
-// 			}
-// 			handlers = append(handlers, handler)
-// 		} else if tagValue := tag.Get("json"); len(tagValue) > 0 {
-// 			tagValues := strings.Split(tagValue, ",")
-// 			tv := tagValues[0]
-// 			if tv == "-" {
-// 				continue
-// 			} else if tv == "" {
-// 				tv = field.Name
-// 			}
-// 			handler := &schemaFieldHandler{Field: field, OmitEmpty: false, Property: camel.Strip(tv), Documentation: documentation}
-// 			for _, tagValue := range tagValues {
-// 				if tagValue == "omitempty" {
-// 					handler.OmitEmpty = true
-// 				}
-// 			}
-// 			handlers = append(handlers, handler)
-// 		} else {
-// 			handler := &schemaFieldHandler{Field: field, OmitEmpty: false, Property: camel.Strip(field.Name), Documentation: documentation}
-// 			handlers = append(handlers, handler)
-// 		}
-// 	}
-// 	return handlers
-// }

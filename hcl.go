@@ -40,19 +40,16 @@ func Unmarshal(ctx context.Context, rd ResourceData, v any) error {
 	return nil
 }
 
-func Schema(v interface{}) (map[string]*schema.Schema, error) {
+func Schema(v interface{}) map[string]*schema.Schema {
 	result := map[string]*schema.Schema{}
 
 	for _, handler := range evalHandlers(reflect.TypeOf(v), v) {
-		fieldValue, err := schemer(handler).Schema()
-		if err != nil {
-			return nil, fmt.Errorf("cannot evaluate schema for field '%s': %s", handler.Field.Name, err.Error())
-		}
+		fieldValue := schemer(handler).Schema()
 		if fieldValue != nil {
 			result[handler.Property] = fieldValue
 		}
 	}
-	return result, nil
+	return result
 }
 
 type InvalidUnmarshalError struct {

@@ -15,11 +15,7 @@ func TestSchemaString(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeString,
@@ -36,11 +32,7 @@ func TestSchemaStringPointer(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeString,
@@ -57,11 +49,7 @@ func TestSchemaStringOptional(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeString,
@@ -80,11 +68,7 @@ func TestSchemaStruct(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"file": {
 			Type:        schema.TypeList,
@@ -112,11 +96,7 @@ func TestSchemaStringSlice(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeList,
@@ -135,11 +115,7 @@ func TestSchemaStringPointerSlice(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeList,
@@ -158,11 +134,7 @@ func TestSchemaStringPointerSlicePointer(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeList,
@@ -183,11 +155,7 @@ func TestSchemaStructSlice(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equalsf(map[string]*schema.Schema{
 		"files": {
 			Type:        schema.TypeList,
@@ -216,11 +184,7 @@ func TestSchemaStructSliceElems(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 
 	assert.Equalsf(map[string]*schema.Schema{
 		"files": {
@@ -259,11 +223,8 @@ func TestSchemaUnorderedStringSlice(t *testing.T) {
 
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
+
 	assert.Equalsf(map[string]*schema.Schema{
 		"name": {
 			Type:        schema.TypeSet,
@@ -353,11 +314,7 @@ func TestUnmarshalComplexItem(t *testing.T) {
 	var record Item
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	sch := hcl.Schema(record)
 	assert.Equals(record.Schema(), sch)
 }
 
@@ -365,12 +322,8 @@ func TestUnmarshalComplexRecord(t *testing.T) {
 	var record Record
 	assert := assert.New(t)
 
-	sch, err := hcl.Schema(record)
+	sch := hcl.Schema(record)
 
-	if err != nil {
-		t.Error(err)
-		return
-	}
 	assert.Equals(record.Schema(), sch)
 }
 
