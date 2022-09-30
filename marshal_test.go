@@ -1,6 +1,7 @@
 package hcl_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/dtcookie/assert"
@@ -64,7 +65,7 @@ func TestPrimitives(t *testing.T) {
 		0.0,
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -120,7 +121,7 @@ func TestAliases(t *testing.T) {
 		Float32Alias: Float32Alias(36.0),
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -175,7 +176,7 @@ func TestZeroPrimitives(t *testing.T) {
 		ZeroString:  "",
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -232,7 +233,7 @@ func TestOmittedZeroPrimitives(t *testing.T) {
 		OmittedString:  "",
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -273,7 +274,7 @@ func TestPointers(t *testing.T) {
 		String:   opt.NewString("49"),
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -328,7 +329,7 @@ func TestZeroPointers(t *testing.T) {
 		ZeroStringP:  nil,
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -385,7 +386,7 @@ func TestOmittedZeroPointers(t *testing.T) {
 		OmittedStringP:  nil,
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -410,7 +411,7 @@ func TestUnexported(t *testing.T) {
 		true,
 	}
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -440,7 +441,7 @@ func TestSlices(t *testing.T) {
 		StringSliceAlias: StringSliceAlias{"s3"},
 		IntSlice:         []int{3, 7, 9},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -478,7 +479,7 @@ func TestTags(t *testing.T) {
 		StringD:  "StringD",
 		StringE:  "StringE",
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -511,7 +512,7 @@ func TestStructs(t *testing.T) {
 			String: "string",
 		},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -541,7 +542,7 @@ func TestStructPointers(t *testing.T) {
 			String: "string",
 		},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -567,7 +568,7 @@ func TestZeroStructPointers(t *testing.T) {
 		Foo: "foo",
 		Bar: nil,
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -599,7 +600,7 @@ func TestStructSlices(t *testing.T) {
 			},
 		},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -643,7 +644,7 @@ func TestStructPointerSlices(t *testing.T) {
 			},
 		},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -689,7 +690,7 @@ func TestStructSliceAliases(t *testing.T) {
 			},
 		},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -729,7 +730,7 @@ func TestStructSlicesWithoutElem(t *testing.T) {
 			},
 		},
 	}
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return
@@ -768,7 +769,7 @@ func TestAnonymousFields(t *testing.T) {
 	}
 	assert := assert.New(t)
 
-	m, err := hcl.Marshal(record)
+	m, err := hcl.Marshal(context.Background(), record)
 	if err != nil {
 		t.Error(err)
 		return

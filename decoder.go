@@ -1,7 +1,7 @@
 package hcl
 
 import (
-	"errors"
+	"context"
 	"fmt"
 	"reflect"
 
@@ -10,8 +10,8 @@ import (
 
 type decoder handler
 
-func (me decoder) Decode(rd ResourceData, t reflect.Type) (any, error) {
-	return me.decode(rd, t)
+func (me decoder) Decode(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
+	return me.decode(ctx, rd, t)
 }
 
 func setTo(rv reflect.Value, v any) {
@@ -24,8 +24,8 @@ func setTo(rv reflect.Value, v any) {
 	rv.Set(reflect.ValueOf(v).Convert(rv.Type()))
 }
 
-func (me decoder) decodePointer(rd ResourceData, t reflect.Type) (any, error) {
-	sch, err := me.decode(rd, unref(t))
+func (me decoder) decodePointer(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
+	sch, err := me.decode(ctx, rd, unref(t))
 	if err == nil {
 		return sch, err
 	}
@@ -35,18 +35,18 @@ func (me decoder) decodePointer(rd ResourceData, t reflect.Type) (any, error) {
 	return nil, err
 }
 
-func (me decoder) decodeStruct(rd ResourceData, t reflect.Type) (any, error) {
+func (me decoder) decodeStruct(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
 	if value, ok := rd.GetOk(me.Property + ".#"); !ok || value == nil || value.(int) == 0 {
 		return nil, nil
 	}
 	targetStructPointer := reflect.New(t).Interface()
-	if err := Unmarshal(&resourceData{parent: rd, prefix: me.Property + ".0"}, targetStructPointer); err != nil {
+	if err := Unmarshal(ctx, &resourceData{parent: rd, prefix: me.Property + ".0"}, targetStructPointer); err != nil {
 		return nil, err
 	}
 	return reflect.ValueOf(targetStructPointer).Elem().Interface(), nil
 }
 
-func (me decoder) decodePrimitiveSlice(rd ResourceData, t reflect.Type) (any, error) {
+func (me decoder) decodePrimitiveSlice(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
 	value, ok := rd.GetOk(me.Property)
 	if !ok {
 		return nil, nil
@@ -76,52 +76,75 @@ func (me decoder) decodePrimitiveSlice(rd ResourceData, t reflect.Type) (any, er
 	return targetSlice.Interface(), nil
 }
 
-func (me decoder) decodeStructSlice(rd ResourceData, t reflect.Type) (any, error) {
+func (me decoder) decodeStructSlice(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
 	value, ok := rd.GetOk(me.Property + ".#")
 	if !ok || value == nil || value.(int) == 0 {
 		return nil, nil
 	}
 	targetSlice := reflect.New(t).Elem()
-	if me.Unordered {
-		untypedResourceSet, ok := rd.GetOk(me.Property)
-		if !ok {
-			return nil, errors.New("ok expected")
-		}
-		resourceSet := untypedResourceSet.(*schema.Set)
-		for _, resource := range resourceSet.List() {
-			targetStructPointer := reflect.New(unref(t.Elem())).Interface()
-			if err := Unmarshal(&resourceData{parent: rd, prefix: fmt.Sprintf("%s.%d", me.Property, resourceSet.F(resource))}, targetStructPointer); err != nil {
-				return nil, err
+	if len(me.Elem) > 0 {
+		if me.Unordered {
+			v, _ := rd.GetOk(fmt.Sprintf("%s.0.%s", me.Property, me.Elem))
+			resourceSet := v.(*schema.Set)
+			for _, resource := range resourceSet.List() {
+				targetStructPointer := reflect.New(unref(t.Elem())).Interface()
+				if err := Unmarshal(ctx, &resourceData{parent: rd, prefix: fmt.Sprintf("%s.0.%s.%d", me.Property, me.Elem, resourceSet.F(resource))}, targetStructPointer); err != nil {
+					return nil, err
+				}
+				targetElem := reflect.New(t.Elem()).Elem()
+				setTo(targetElem, reflect.ValueOf(targetStructPointer).Elem().Interface())
+				targetSlice = reflect.Append(targetSlice, targetElem)
 			}
-			targetElem := reflect.New(t.Elem()).Elem()
-			setTo(targetElem, reflect.ValueOf(targetStructPointer).Elem().Interface())
-			targetSlice = reflect.Append(targetSlice, targetElem)
+		} else {
+			for idx := 0; idx < value.(int); idx++ {
+				targetStructPointer := reflect.New(unref(t.Elem())).Interface()
+				if err := Unmarshal(ctx, &resourceData{parent: rd, prefix: fmt.Sprintf("%s.%d", me.Property, idx)}, targetStructPointer); err != nil {
+					return nil, err
+				}
+				targetElem := reflect.New(t.Elem()).Elem()
+				setTo(targetElem, reflect.ValueOf(targetStructPointer).Elem().Interface())
+				targetSlice = reflect.Append(targetSlice, targetElem)
+			}
 		}
 	} else {
-		for idx := 0; idx < value.(int); idx++ {
-			targetStructPointer := reflect.New(unref(t.Elem())).Interface()
-			if err := Unmarshal(&resourceData{parent: rd, prefix: fmt.Sprintf("%s.%d", me.Property, idx)}, targetStructPointer); err != nil {
-				return nil, err
+		if me.Unordered {
+			v, _ := rd.GetOk(me.Property)
+			resourceSet := v.(*schema.Set)
+			for _, resource := range resourceSet.List() {
+				targetStructPointer := reflect.New(unref(t.Elem())).Interface()
+				if err := Unmarshal(ctx, &resourceData{parent: rd, prefix: fmt.Sprintf("%s.%d", me.Property, resourceSet.F(resource))}, targetStructPointer); err != nil {
+					return nil, err
+				}
+				targetElem := reflect.New(t.Elem()).Elem()
+				setTo(targetElem, reflect.ValueOf(targetStructPointer).Elem().Interface())
+				targetSlice = reflect.Append(targetSlice, targetElem)
 			}
-			targetElem := reflect.New(t.Elem()).Elem()
-			setTo(targetElem, reflect.ValueOf(targetStructPointer).Elem().Interface())
-			targetSlice = reflect.Append(targetSlice, targetElem)
+		} else {
+			for idx := 0; idx < value.(int); idx++ {
+				targetStructPointer := reflect.New(unref(t.Elem())).Interface()
+				if err := Unmarshal(ctx, &resourceData{parent: rd, prefix: fmt.Sprintf("%s.%d", me.Property, idx)}, targetStructPointer); err != nil {
+					return nil, err
+				}
+				targetElem := reflect.New(t.Elem()).Elem()
+				setTo(targetElem, reflect.ValueOf(targetStructPointer).Elem().Interface())
+				targetSlice = reflect.Append(targetSlice, targetElem)
+			}
 		}
 	}
 	return targetSlice.Interface(), nil
 }
 
-func (me decoder) decodeSlice(rd ResourceData, t reflect.Type) (any, error) {
+func (me decoder) decodeSlice(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
 	switch elemKind := unref(t.Elem()).Kind(); elemKind {
 	case reflect.Float32, reflect.Float64, reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return me.decodePrimitiveSlice(rd, t)
+		return me.decodePrimitiveSlice(ctx, rd, t)
 	case reflect.Struct:
-		return me.decodeStructSlice(rd, t)
+		return me.decodeStructSlice(ctx, rd, t)
 	}
 	return nil, UnsupportedTypeError{me.Field.Name, t}
 }
 
-func (me decoder) decodePrimitive(rd ResourceData, t reflect.Type) (any, error) {
+func (me decoder) decodePrimitive(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
 	value, ok := rd.GetOk(me.Property)
 	if ok {
 		rv := reflect.New(t).Elem()
@@ -131,18 +154,18 @@ func (me decoder) decodePrimitive(rd ResourceData, t reflect.Type) (any, error) 
 	return nil, nil
 }
 
-func (me decoder) decode(rd ResourceData, t reflect.Type) (any, error) {
+func (me decoder) decode(ctx context.Context, rd ResourceData, t reflect.Type) (any, error) {
 	switch kind := t.Kind(); kind {
 	case reflect.Map, reflect.Interface, reflect.Array, reflect.Uintptr, reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return nil, UnsupportedTypeError{me.Field.Name, t}
 	case reflect.Struct:
-		return me.decodeStruct(rd, t)
+		return me.decodeStruct(ctx, rd, t)
 	case reflect.Pointer:
-		return me.decodePointer(rd, t)
+		return me.decodePointer(ctx, rd, t)
 	case reflect.Slice:
-		return me.decodeSlice(rd, t)
+		return me.decodeSlice(ctx, rd, t)
 	case reflect.Float32, reflect.Float64, reflect.String, reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return me.decodePrimitive(rd, t)
+		return me.decodePrimitive(ctx, rd, t)
 	default:
 		return nil, UnsupportedTypeError{me.Field.Name, t}
 	}

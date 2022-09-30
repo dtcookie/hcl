@@ -1,6 +1,7 @@
 package hcl_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/dtcookie/assert"
@@ -34,7 +35,7 @@ func TestUnmarshalPrimitives(t *testing.T) {
 
 	var record Record
 	assert := assert.New(t)
-	assert.Success(hcl.Unmarshal(TestingResourceData{
+	assert.Success(hcl.Unmarshal(context.Background(), TestingResourceData{
 		"name":                 "name-value",
 		"string_alias_x":       "string-alias",
 		"string_alias_p":       "string-alias-p",
@@ -59,7 +60,7 @@ func TestUnmarshalStringSlice(t *testing.T) {
 	var record Record
 
 	assert := assert.New(t)
-	assert.Success(hcl.Unmarshal(TestingResourceData{"names": []any{"name-value"}}, &record))
+	assert.Success(hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{"name-value"}}, &record))
 
 	assert.Equals(Record{Names: []string{"name-value"}}, record)
 }
@@ -68,7 +69,7 @@ func TestUnmarshalStringSlicePointer(t *testing.T) {
 	record := struct {
 		Names *[]string
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"names": []any{"name-value"},
 	}, &record)
 	if err != nil {
@@ -87,7 +88,7 @@ func TestUnmarshalStringPointerSlice(t *testing.T) {
 	record := struct {
 		Names []*string
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"names": []any{"name-value"},
 	}, &record)
 	if err != nil {
@@ -106,7 +107,7 @@ func TestUnmarshalStringPointerAliasSlice(t *testing.T) {
 	record := struct {
 		Names []StringPointerAlias
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"names": []any{"name-value"},
 	}, &record)
 	if err != nil {
@@ -125,7 +126,7 @@ func TestUnmarshalStringPointerSliceAlias(t *testing.T) {
 	record := struct {
 		Names StringPointerSliceAlias
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"names": []any{"name-value"},
 	}, &record)
 	if err != nil {
@@ -144,7 +145,7 @@ func TestStringPointerSliceAliasAlias(t *testing.T) {
 	record := struct {
 		Names StringPointerSliceAliasAlias
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"names": []any{"name-value"},
 	}, &record)
 	if err != nil {
@@ -163,7 +164,7 @@ func TestUnmarshalStringPointerPointerSlice(t *testing.T) {
 	record := struct {
 		Names []**string
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"names": []any{"name-value"},
 	}, &record)
 	if err != nil {
@@ -180,7 +181,7 @@ func TestUnmarshalStringPointerPointerSlice(t *testing.T) {
 
 func TestUnmarshalInt64Slice(t *testing.T) {
 	record := struct{ Names []int64 }{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Names []int64 }{Names: []int64{42}}, record)
@@ -188,7 +189,7 @@ func TestUnmarshalInt64Slice(t *testing.T) {
 
 func TestUnmarshalInt64SlicePointer(t *testing.T) {
 	record := struct{ Names *[]int64 }{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Names *[]int64 }{Names: addr([]int64{42})}, record)
@@ -196,7 +197,7 @@ func TestUnmarshalInt64SlicePointer(t *testing.T) {
 
 func TestUnmarshalInt64PointerSlice(t *testing.T) {
 	record := struct{ Names []*int64 }{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Names []*int64 }{Names: []*int64{addr(int64(42))}}, record)
@@ -204,7 +205,7 @@ func TestUnmarshalInt64PointerSlice(t *testing.T) {
 
 func TestUnmarshalInt64PointerAliasSlice(t *testing.T) {
 	record := struct{ Names []Int64PointerAlias }{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Names []Int64PointerAlias }{
@@ -214,7 +215,7 @@ func TestUnmarshalInt64PointerAliasSlice(t *testing.T) {
 
 func TestUnmarshalInt64PointerSliceAlias(t *testing.T) {
 	record := struct{ Names Int64PointerSliceAlias }{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Names Int64PointerSliceAlias }{Names: Int64PointerSliceAlias([]*int64{addr(int64(42))})}, record)
@@ -224,7 +225,7 @@ func TestInt64PointerSliceAliasAlias(t *testing.T) {
 	record := struct {
 		Names Int64PointerSliceAliasAlias
 	}{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct {
@@ -236,7 +237,7 @@ func TestInt64PointerSliceAliasAlias(t *testing.T) {
 
 func TestUnmarshalInt64PointerPointerSlice(t *testing.T) {
 	record := struct{ Names []**int64 }{}
-	if err := hcl.Unmarshal(TestingResourceData{"names": []any{42}}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"names": []any{42}}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Names []**int64 }{Names: []**int64{addr(addr(int64(42)))}}, record)
@@ -248,7 +249,7 @@ func TestUnmarshalStruct(t *testing.T) {
 			Name string
 		}
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"item.#":      1,
 			"item.0.name": "42",
@@ -279,7 +280,7 @@ func TestUnmarshalStructPointer(t *testing.T) {
 			Name string
 		}
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"item.#":      1,
 			"item.0.name": "42",
@@ -306,13 +307,13 @@ func TestUnmarshalStructPointer(t *testing.T) {
 
 func TestUnmarshalNilStructPointer(t *testing.T) {
 	record := struct{ Item *struct{ Name string } }{}
-	if err := hcl.Unmarshal(TestingResourceData{"item.#": 0}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{"item.#": 0}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Item *struct{ Name string } }{}, record)
 
 	record = struct{ Item *struct{ Name string } }{}
-	if err := hcl.Unmarshal(TestingResourceData{}, &record); err != nil {
+	if err := hcl.Unmarshal(context.Background(), TestingResourceData{}, &record); err != nil {
 		t.Error(err)
 	}
 	assert.New(t).Equals(struct{ Item *struct{ Name string } }{}, record)
@@ -324,7 +325,7 @@ func TestUnmarshalStructSlice(t *testing.T) {
 			Name string
 		}
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      1,
 			"items.0.name": "42",
@@ -357,7 +358,7 @@ func TestUnmarshalStructPointerSlice(t *testing.T) {
 			Name string
 		}
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      1,
 			"items.0.name": "42",
@@ -390,7 +391,7 @@ func TestUnmarshalStructSlicePointer(t *testing.T) {
 			Name string
 		}
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      1,
 			"items.0.name": "42",
@@ -426,7 +427,7 @@ func TestUnmarshalStructPointerAliasSlice(t *testing.T) {
 	record := struct {
 		Items []structPointerAlias
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      1,
 			"items.0.name": "42",
@@ -457,7 +458,7 @@ func TestUnmarshalStructSliceAlias(t *testing.T) {
 	record := struct {
 		Items structSliceAlias
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      1,
 			"items.0.name": "42",
@@ -482,7 +483,7 @@ func TestUnmarshalStructSliceAlias(t *testing.T) {
 	record = struct {
 		Items structSliceAlias
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      2,
 			"items.0.name": "42",
@@ -513,7 +514,7 @@ func TestUnmarshalStructSliceAliasPointer(t *testing.T) {
 	record := struct {
 		Items *structSliceAlias
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      1,
 			"items.0.name": "42",
@@ -538,7 +539,7 @@ func TestUnmarshalStructSliceAliasPointer(t *testing.T) {
 	record = struct {
 		Items *structSliceAlias
 	}{}
-	if err := hcl.Unmarshal(
+	if err := hcl.Unmarshal(context.Background(),
 		TestingResourceData{
 			"items.#":      2,
 			"items.0.name": "42",
@@ -569,7 +570,7 @@ func TestUnmarshalStringSet(t *testing.T) {
 	record := struct {
 		Names []string `hcl:"foos,unordered"`
 	}{}
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"foos": schema.NewSet(schema.HashString, []any{"name-value"}),
 	}, &record)
 	if err != nil {
@@ -593,10 +594,36 @@ func TestUnmarshalStructSet(t *testing.T) {
 	}
 	var record Record
 
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"foos.#":         1,
 		"foos.666.value": "name-value",
 		"foos":           schema.NewSet(func(interface{}) int { return 666 }, []any{map[string]any{"value": "name-value"}}),
+	}, &record)
+	if err != nil {
+		t.Error(err)
+	}
+	assert := assert.New(t)
+
+	assert.Equals(
+		Record{Names: []Name{{Value: "name-value"}}},
+		record,
+	)
+}
+
+func TestUnmarshalStructElemSet(t *testing.T) {
+	type Name struct {
+		Value string
+	}
+	type Record struct {
+		Names []Name `hcl:"foos,elem=foo,unordered"`
+	}
+	var record Record
+
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
+		"foos.#":               1,
+		"foos.0.foo.#":         1,
+		"foos.0.foo.666.value": "name-value",
+		"foos.0.foo":           schema.NewSet(func(interface{}) int { return 666 }, []any{map[string]any{"value": "name-value"}}),
 	}, &record)
 	if err != nil {
 		t.Error(err)
@@ -618,7 +645,7 @@ func TestUnmarshalStructPointerSet(t *testing.T) {
 	}
 	var record Record
 
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"foos.#":         1,
 		"foos.666.value": "name-value",
 		"foos":           schema.NewSet(func(interface{}) int { return 666 }, []any{map[string]any{"value": "name-value"}}),
@@ -644,7 +671,7 @@ func TestUnmarshalNilStructPointer2(t *testing.T) {
 	}
 	var record Record
 
-	err := hcl.Unmarshal(TestingResourceData{
+	err := hcl.Unmarshal(context.Background(), TestingResourceData{
 		"foos.#": 0,
 		"string": "some-string",
 	}, &record)
@@ -659,7 +686,7 @@ func TestUnmarshalNilStructPointer2(t *testing.T) {
 	)
 
 	record = Record{}
-	err = hcl.Unmarshal(TestingResourceData{
+	err = hcl.Unmarshal(context.Background(), TestingResourceData{
 		"string": "some-string",
 	}, &record)
 	if err != nil {

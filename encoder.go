@@ -1,6 +1,7 @@
 package hcl
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -9,7 +10,7 @@ import (
 
 type encoder handler
 
-func (me encoder) encode() (interface{}, error) {
+func (me encoder) encode(ctx context.Context) (interface{}, error) {
 	if me.OmitEmpty {
 		switch kind := me.Value.Kind(); kind {
 		case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
@@ -27,7 +28,7 @@ func (me encoder) encode() (interface{}, error) {
 	case reflect.Map, reflect.Interface, reflect.Array, reflect.Uintptr, reflect.Complex64, reflect.Complex128, reflect.Chan, reflect.Func, reflect.UnsafePointer:
 		return nil, UnsupportedTypeError{me.Field.Name, me.Value.Type()}
 	case reflect.Struct:
-		serialized, err := Marshal(me.Value.Interface())
+		serialized, err := Marshal(ctx, me.Value.Interface())
 		if err != nil {
 			return nil, err
 		}
@@ -36,11 +37,11 @@ func (me encoder) encode() (interface{}, error) {
 		if !me.Value.IsValid() || me.Value.IsZero() || me.Value.IsNil() {
 			return nil, nil
 		}
-		return encoder{Value: me.Value.Elem(), OmitEmpty: false, Field: me.Field, Unordered: me.Unordered, Property: me.Property}.encode()
+		return encoder{Value: me.Value.Elem(), OmitEmpty: false, Field: me.Field, Unordered: me.Unordered, Property: me.Property}.encode(ctx)
 	case reflect.Slice:
 		refElemsSlice := reflect.New(serialTypeOf(me.Value.Type())).Elem()
 		for idx := 0; idx < me.Value.Len(); idx++ {
-			elem, err := encoder{Value: me.Value.Index(idx), OmitEmpty: false, Field: me.Field, Unordered: me.Unordered, Property: me.Property}.encode()
+			elem, err := encoder{Value: me.Value.Index(idx), OmitEmpty: false, Field: me.Field, Unordered: me.Unordered, Property: me.Property}.encode(ctx)
 			if err != nil {
 				return nil, err
 			}

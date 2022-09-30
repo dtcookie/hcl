@@ -1,17 +1,18 @@
 package hcl
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 )
 
-func Marshal(v interface{}) (map[string]interface{}, error) {
+func Marshal(ctx context.Context, v interface{}) (map[string]interface{}, error) {
 	result := map[string]interface{}{}
 
 	for _, handler := range evalHandlers(reflect.TypeOf(v), v) {
-		fieldValue, err := encoder(handler).encode()
+		fieldValue, err := encoder(handler).encode(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("cannot serialize field '%s': %s", handler.Field.Name, err.Error())
 		}
@@ -22,13 +23,13 @@ func Marshal(v interface{}) (map[string]interface{}, error) {
 	return result, nil
 }
 
-func Unmarshal(rd ResourceData, v any) error {
+func Unmarshal(ctx context.Context, rd ResourceData, v any) error {
 	rv := reflect.ValueOf(v)
 	if rv.Kind() != reflect.Pointer || rv.IsNil() {
 		return &InvalidUnmarshalError{reflect.TypeOf(v)}
 	}
 	for _, handler := range evalHandlers(reflect.TypeOf(v).Elem(), rv.Elem().Interface()) {
-		fieldValue, err := decoder(handler).Decode(rd, handler.Field.Type)
+		fieldValue, err := decoder(handler).Decode(ctx, rd, handler.Field.Type)
 		if err != nil {
 			return fmt.Errorf("cannot deserialize field '%s': %s", handler.Field.Name, err.Error())
 		}
