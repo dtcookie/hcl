@@ -100,12 +100,29 @@ func (d *decoder) DecodeSlice(key string, v interface{}) error {
 	}
 	vSlice := rv.Elem()
 	if result, ok := d.GetOk(fmt.Sprintf("%v.#", key)); ok {
-		for idx := 0; idx < result.(int); idx++ {
-			entry := reflect.New(elemType.Elem()).Interface()
-			if err := entry.(Unmarshaler).UnmarshalHCL(NewDecoder(d, key, idx)); err != nil {
-				return err
+		if untypedValue, ok := d.GetOk(key); ok {
+			setValue, ok := untypedValue.(Set)
+			if ok {
+				for _, entryMap := range setValue.List() {
+					rv := reflect.ValueOf(setValue).Elem()
+					fField := rv.FieldByName("F")
+					vhash := fField.Call([]reflect.Value{reflect.ValueOf(entryMap)})
+					hash := vhash[0].Interface()
+					entry := reflect.New(elemType.Elem()).Interface()
+					if err := entry.(Unmarshaler).UnmarshalHCL(NewDecoder(d, key, hash)); err != nil {
+						return err
+					}
+					vSlice.Set(reflect.Append(vSlice, reflect.ValueOf(entry)))
+				}
+			} else {
+				for idx := 0; idx < result.(int); idx++ {
+					entry := reflect.New(elemType.Elem()).Interface()
+					if err := entry.(Unmarshaler).UnmarshalHCL(NewDecoder(d, key, idx)); err != nil {
+						return err
+					}
+					vSlice.Set(reflect.Append(vSlice, reflect.ValueOf(entry)))
+				}
 			}
-			vSlice.Set(reflect.Append(vSlice, reflect.ValueOf(entry)))
 		}
 	}
 
@@ -564,5 +581,9 @@ func (vd *voidDecoder) MarshalAll(items map[string]interface{}) (Properties, err
 }
 
 func (vd *voidDecoder) DecodeSlice(key string, v interface{}) error {
+	return nil
+}
+
+func (vd *voidDecoder) DecodeSet(key string, v interface{}) error {
 	return nil
 }
